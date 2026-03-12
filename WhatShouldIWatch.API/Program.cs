@@ -1,13 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using WhatShouldIWatch.Business.Algorithms;
 using WhatShouldIWatch.Data.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Stdout log (IIS 500 hatasında gerçek hatayı görmek için)
 builder.Logging.AddConsole();
 
-// Excel Contents klasörü: IIS/Kestrel için ContentRootPath veya BaseDirectory kullan
 var baseDir = builder.Environment.ContentRootPath ?? AppContext.BaseDirectory;
 var contentsPath = Path.Combine(baseDir, "Contents");
 try
@@ -31,16 +30,15 @@ catch (UnauthorizedAccessException)
 }
 
 builder.Services.AddSingleton<IContentRepository>(new ExcelContentRepository(contentsPath));
+builder.Services.AddSingleton<IKeyboardFuzzySearch, TurkishKeyboardFuzzySearch>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(WhatShouldIWatch.Business.Suggestion.Requests.GetSuggestionsRequest).Assembly));
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

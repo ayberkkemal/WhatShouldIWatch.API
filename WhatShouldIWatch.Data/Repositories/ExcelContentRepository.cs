@@ -13,7 +13,6 @@ public class ExcelContentRepository : IContentRepository
 
     private static readonly string[] ExcelFiles = { "Film Listesi.xlsx", "Dizi Listesi.xlsx" };
 
-    /// <param name="contentsPath">Excel dosyalarının bulunduğu Contents klasörünün tam yolu.</param>
     public ExcelContentRepository(string contentsPath)
     {
         _contentsPath = contentsPath ?? throw new ArgumentNullException(nameof(contentsPath));
@@ -65,6 +64,50 @@ public class ExcelContentRepository : IContentRepository
         return results;
     }
 
+    public async Task<IReadOnlyList<string>> GetUniqueSearchTermsAsync(CancellationToken cancellationToken = default)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var fileName in ExcelFiles)
+        {
+            var filePath = Path.Combine(_contentsPath, fileName);
+            if (!File.Exists(filePath))
+                continue;
+
+            await Task.Run(() =>
+            {
+                using var workbook = new XLWorkbook(filePath);
+                var worksheet = workbook.Worksheet(1);
+
+                var (_, duyguHedefiCol, turCol, duyguCol) = FindColumnIndexes(worksheet);
+                if (duyguHedefiCol < 0 && turCol < 0 && duyguCol < 0)
+                    return;
+
+                var lastRow = worksheet.LastRowUsed()?.RowNumber() ?? 0;
+                for (var row = 2; row <= lastRow; row++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (duyguHedefiCol >= 0)
+                        AddNonEmpty(set, GetCellValue(worksheet, row, duyguHedefiCol));
+                    if (turCol >= 0)
+                        AddNonEmpty(set, GetCellValue(worksheet, row, turCol));
+                    if (duyguCol >= 0)
+                        AddNonEmpty(set, GetCellValue(worksheet, row, duyguCol));
+                }
+            }, cancellationToken).ConfigureAwait(false);
+        }
+
+        return set.ToList();
+    }
+
+    private static void AddNonEmpty(HashSet<string> set, string? value)
+    {
+        var v = value?.Trim();
+        if (!string.IsNullOrWhiteSpace(v))
+            set.Add(v);
+    }
+
     private static (int FirstCol, int DuyguHedefiCol, int TurCol, int DuyguCol) FindColumnIndexes(IXLWorksheet ws)
     {
         var firstRow = ws.FirstRowUsed();
@@ -102,7 +145,6 @@ public class ExcelContentRepository : IContentRepository
         return cell.GetValue<string>()?.Trim();
     }
 
-    /// <summary>Kullanıcı metni Duygu Hedefi, Tür veya Duygu kolonlarından en az birinin içinde geçiyorsa true (LIKE/Contains).</summary>
     private static bool TextMatchesAnyColumn(string searchText, string? rowDuyguHedefi, string? rowTur, string? rowDuygu)
     {
         return ContainsIgnoreCase(rowDuyguHedefi, searchText)
