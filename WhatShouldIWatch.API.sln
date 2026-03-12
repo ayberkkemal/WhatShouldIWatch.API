@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatShouldIWatch.API", "Wha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatShouldIWatch.Business", "WhatShouldIWatch.Business\WhatShouldIWatch.Business.csproj", "{6B418222-FF0A-499A-8F16-E4551B65987C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatShouldIWatch.Data", "WhatShouldIWatch.Data\WhatShouldIWatch.Data.csproj", "{84B149D8-276D-4F4D-B239-4EFB0702DC19}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{6B418222-FF0A-499A-8F16-E4551B65987C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B418222-FF0A-499A-8F16-E4551B65987C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B418222-FF0A-499A-8F16-E4551B65987C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84B149D8-276D-4F4D-B239-4EFB0702DC19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84B149D8-276D-4F4D-B239-4EFB0702DC19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84B149D8-276D-4F4D-B239-4EFB0702DC19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84B149D8-276D-4F4D-B239-4EFB0702DC19}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
