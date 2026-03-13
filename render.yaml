@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: whatshouldiwatch-api
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
