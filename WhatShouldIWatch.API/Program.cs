@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using WhatShouldIWatch.Business.Algorithms;
 using WhatShouldIWatch.Data.Repositories;
 
@@ -7,29 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.AddConsole();
 
-var baseDir = builder.Environment.ContentRootPath ?? AppContext.BaseDirectory;
-var contentsPath = Path.Combine(baseDir, "Contents");
-try
-{
-    if (!Directory.Exists(contentsPath))
-    {
-        var alt = Path.Combine(AppContext.BaseDirectory, "Contents");
-        if (Directory.Exists(alt))
-            contentsPath = alt;
-        else
-        {
-            var dataContents = Path.Combine(baseDir, "..", "WhatShouldIWatch.Data", "Contents");
-            if (Directory.Exists(dataContents))
-                contentsPath = Path.GetFullPath(dataContents);
-        }
-    }
-}
-catch (UnauthorizedAccessException)
-{
-    contentsPath = Path.GetTempPath();
-}
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("ConnectionStrings:DefaultConnection gerekli.");
 
-builder.Services.AddSingleton<IContentRepository>(new ExcelContentRepository(contentsPath));
+var dataSource = new NpgsqlDataSourceBuilder(connectionString).Build();
+builder.Services.AddSingleton(dataSource);
+builder.Services.AddSingleton<IContentRepository, PgContentRepository>();
 builder.Services.AddSingleton<IKeyboardFuzzySearch, TurkishKeyboardFuzzySearch>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(WhatShouldIWatch.Business.Suggestion.Requests.GetSuggestionsRequest).Assembly));
 
