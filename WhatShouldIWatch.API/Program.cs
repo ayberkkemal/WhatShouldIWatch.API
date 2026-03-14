@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using WhatShouldIWatch.Business.Algorithms;
+using WhatShouldIWatch.Business.Suggestion.Services;
 using WhatShouldIWatch.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,8 @@ var dataSource = new NpgsqlDataSourceBuilder(connectionString).Build();
 builder.Services.AddSingleton(dataSource);
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddSingleton<IKeyboardFuzzySearch, TurkishKeyboardFuzzySearch>();
+builder.Services.AddSingleton<IEmotionKeywordExtractor, RuleBasedEmotionKeywordExtractor>();
+
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(WhatShouldIWatch.Business.Suggestion.Requests.GetSuggestionsRequest).Assembly));
 
 builder.Services.AddControllers();

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WhatShouldIWatch.Business.Algorithms;
 using WhatShouldIWatch.Business.Suggestion.Models;
 using WhatShouldIWatch.Business.Suggestion.Requests;
+using WhatShouldIWatch.Business.Suggestion.Services;
 using WhatShouldIWatch.Data;
 
 namespace WhatShouldIWatch.Business.Suggestion.Handlers;
@@ -11,13 +12,16 @@ public class GetSuggestionsRequestHandler : IRequestHandler<GetSuggestionsReques
 {
     private readonly AppDbContext _db;
     private readonly IKeyboardFuzzySearch _keyboardFuzzySearch;
+    private readonly IEmotionKeywordExtractor _keywordExtractor;
 
     public GetSuggestionsRequestHandler(
         AppDbContext db,
-        IKeyboardFuzzySearch keyboardFuzzySearch)
+        IKeyboardFuzzySearch keyboardFuzzySearch,
+        IEmotionKeywordExtractor keywordExtractor)
     {
         _db = db;
         _keyboardFuzzySearch = keyboardFuzzySearch;
+        _keywordExtractor = keywordExtractor;
     }
 
     public async Task<List<GetSuggestionsModel>> Handle(GetSuggestionsRequest request, CancellationToken cancellationToken)
@@ -26,34 +30,70 @@ public class GetSuggestionsRequestHandler : IRequestHandler<GetSuggestionsReques
         if (string.IsNullOrWhiteSpace(searchText))
             return new List<GetSuggestionsModel>();
 
-        var uniqueTerms = await GetUniqueSearchTermsAsync(cancellationToken);
-        var candidates = _keyboardFuzzySearch.GetSearchCandidates(searchText, uniqueTerms, maxCandidates: 5);
+        var keywords = await _keywordExtractor.ExtractKeywordsAsync(searchText, cancellationToken);
 
         var byId = new Dictionary<long, (string TypeName, string Name)>();
-        foreach (var candidate in candidates)
-        {
-            var pattern = "%" + candidate + "%";
-            var items = await _db.Contents
-                .AsNoTracking()
-                .Include(c => c.ContentType)
-                .Where(c =>
-                    (c.EmotionTarget != null && EF.Functions.ILike(c.EmotionTarget, pattern)) ||
-                    (c.Genre != null && EF.Functions.ILike(c.Genre, pattern)) ||
-                    (c.Emotion != null && EF.Functions.ILike(c.Emotion, pattern)))
-                .Select(c => new
-                {
-                    c.Id,
-                    TypeName = c.ContentType!.Name,
-                    Name = (c.ContentNameTr ?? c.ContentNameEn) ?? ""
-                })
-                .ToListAsync(cancellationToken);
 
-            foreach (var x in items)
+        if (keywords.Count > 0)
+        {
+            foreach (var keyword in keywords.Take(15))
             {
-                if (string.IsNullOrWhiteSpace(x.Name)) continue;
-                var name = x.Name.Trim();
-                if (!byId.ContainsKey(x.Id))
-                    byId[x.Id] = (x.TypeName, name);
+                var pattern = "%" + keyword + "%";
+                var items = await _db.Contents
+                    .AsNoTracking()
+                    .Include(c => c.ContentType)
+                    .Where(c =>
+                        (c.EmotionTarget != null && EF.Functions.ILike(c.EmotionTarget, pattern)) ||
+                        (c.Genre != null && EF.Functions.ILike(c.Genre, pattern)) ||
+                        (c.Emotion != null && EF.Functions.ILike(c.Emotion, pattern)))
+                    .Select(c => new
+                    {
+                        c.Id,
+                        TypeName = c.ContentType!.Name,
+                        Name = (c.ContentNameTr ?? c.ContentNameEn) ?? ""
+                    })
+                    .ToListAsync(cancellationToken);
+
+                foreach (var x in items)
+                {
+                    if (string.IsNullOrWhiteSpace(x.Name)) continue;
+                    var name = x.Name.Trim();
+                    if (!byId.ContainsKey(x.Id))
+                        byId[x.Id] = (x.TypeName, name);
+                }
+            }
+        }
+
+        if (byId.Count < 5)
+        {
+            var uniqueTerms = await GetUniqueSearchTermsAsync(cancellationToken);
+            var candidates = _keyboardFuzzySearch.GetSearchCandidates(searchText, uniqueTerms, maxCandidates: 5);
+
+            foreach (var candidate in candidates)
+            {
+                var pattern = "%" + candidate + "%";
+                var items = await _db.Contents
+                    .AsNoTracking()
+                    .Include(c => c.ContentType)
+                    .Where(c =>
+                        (c.EmotionTarget != null && EF.Functions.ILike(c.EmotionTarget, pattern)) ||
+                        (c.Genre != null && EF.Functions.ILike(c.Genre, pattern)) ||
+                        (c.Emotion != null && EF.Functions.ILike(c.Emotion, pattern)))
+                    .Select(c => new
+                    {
+                        c.Id,
+                        TypeName = c.ContentType!.Name,
+                        Name = (c.ContentNameTr ?? c.ContentNameEn) ?? ""
+                    })
+                    .ToListAsync(cancellationToken);
+
+                foreach (var x in items)
+                {
+                    if (string.IsNullOrWhiteSpace(x.Name)) continue;
+                    var name = x.Name.Trim();
+                    if (!byId.ContainsKey(x.Id))
+                        byId[x.Id] = (x.TypeName, name);
+                }
             }
         }
 
