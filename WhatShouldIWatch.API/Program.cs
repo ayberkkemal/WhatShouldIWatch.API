@@ -1,8 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using WhatShouldIWatch.Business.Algorithms;
-using WhatShouldIWatch.Data.Repositories;
+using WhatShouldIWatch.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +15,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 var dataSource = new NpgsqlDataSourceBuilder(connectionString).Build();
 builder.Services.AddSingleton(dataSource);
-builder.Services.AddSingleton<IContentRepository, PgContentRepository>();
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddSingleton<IKeyboardFuzzySearch, TurkishKeyboardFuzzySearch>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(WhatShouldIWatch.Business.Suggestion.Requests.GetSuggestionsRequest).Assembly));
 
